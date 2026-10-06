@@ -56,12 +56,35 @@ Carrinho360/
 - Conflito no Git: resolver juntos, na mesma tela.
 
 ## ▶️ Como rodar
-Sempre a partir da raiz do repositório:
+Todos os comandos são executados a partir da raiz do repositório.
+
+### 1. Primeira vez (setup)
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python src/database/init_db.py
-python src/database/seed_data.py
-python tests/smoke_test_db.py      # deve mostrar 12/12 verificacoes aprovadas
-python src/tools/schema_tools.py   # ferramentas de schema
+python3 -m venv .venv               # cria o ambiente virtual do projeto
+source .venv/bin/activate           # ativa o venv (o terminal passa a mostrar "(.venv)")
+pip install -r requirements.txt     # instala as dependencias DENTRO do venv
+echo "GEMINI_API_KEY=sua_chave_aqui" > .env   # chave em https://aistudio.google.com/apikey
+```
+
+No VSCode, selecione o interpretador do venv: `Cmd+Shift+P` → **Python: Select Interpreter** → `.venv`.
+
+### 2. Todo dia (antes de rodar qualquer script)
+```bash
+git pull
+source .venv/bin/activate
+```
+
+### 3. Banco de dados
+```bash
+python src/database/init_db.py      # cria as tabelas (apaga o banco anterior)
+python src/database/seed_data.py    # popula com dados + anomalias
+python tests/smoke_test_db.py       # deve mostrar 12/12 verificacoes aprovadas
+```
+
+### 4. Ferramentas e agente
+```bash
+python src/tools/schema_tools.py      # tabelas, colunas e chaves estrangeiras
+python src/tools/profiling_tools.py   # nulos, distintos, estatisticas e amostras
+python src/tools/query_tools.py       # executor SQL somente leitura com LIMIT
+python src/agent/test_tools_llm.py    # Gemini usando as ferramentas (precisa do .env)
 ```
