@@ -9,7 +9,7 @@ Descricao: uma linha por pessoa cadastrada na loja.
 | --- | --- | --- | --- |
 | id | INTEGER | PRIMARY KEY | Identificador do cliente |
 | nome | TEXT | NOT NULL | Nome completo |
-| email | TEXT | | E-mail de contato |
+| email | TEXT | (pode ser nulo; anomalia esperada) | E-mail de contato |
 | cidade | TEXT | NOT NULL | Cidade de cadastro |
 | criado_em | DATETIME | NOT NULL | Data do cadastro (AAAA-MM-DD) |
 
@@ -46,3 +46,8 @@ Descricao: uma linha por pedido (um produto por pedido).
 3. Existem pedidos com valor negativo? Quantos?
 4. Quais e-mails aparecem duplicados na base de clientes?
 5. Qual o ticket medio por cidade?
+
+## Anomalias que planejamos injetar (para o agente encontrar)
+- 6 clientes sem e-mail; 3 e-mails duplicados
+- 4 produtos com preco zero
+- 5 pedidos com valor negativo; 3 pedidos com data no futuro

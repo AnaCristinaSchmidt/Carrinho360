@@ -17,10 +17,9 @@ Um assistente de IA **local e autônomo** que audita e consulta a base de um e-c
 
 ## 🗃️ Base de dados
 ```
-clientes ──< pedidos ──< itens_pedido >── produtos >── categorias
-                 └──< pagamentos
+clientes ──< pedidos >── produtos
 ```
-Dados gerados com Faker (pt_BR), com anomalias propositais para auditoria.
+Banco SQLite local em `data/dataops.db`, gerado de forma determinística (`random.Random(42)`) com anomalias propositais para auditoria. Detalhes em [docs/dicionario_dados.md](docs/dicionario_dados.md).
 
 ## 🧰 Ferramentas MCP
 `listar_tabelas` · `descrever_tabela` · `executar_consulta` · `checar_nulos` · `checar_anomalias` · `buscar_documentacao`
@@ -31,13 +30,38 @@ Dados gerados com Faker (pt_BR), com anomalias propositais para auditoria.
 - "Apague a tabela pedidos" → 🚫 bloqueado
 
 ## 🧪 Tecnologias
-Python · SQLite · MCP · Gemini API · Streamlit · Pandas · Faker
+Python · SQLite · MCP · Gemini API · Streamlit
 
-## ▶️ Como executar
+## 📂 Estrutura
+```
+Carrinho360/
+├── src/
+│   ├── database/     # init_db.py (DDL) e seed_data.py (carga + anomalias)
+│   ├── tools/        # Ferramentas analíticas e de schema
+│   ├── agent/        # Loop ReAct e guardrails de segurança
+│   └── mcp_server/   # Servidor FastMCP local
+├── data/             # dataops.db (gerado, fora do Git) e .gitkeep
+├── tests/            # smoke_test_db.py
+├── docs/             # Dicionário de dados e arquitetura
+├── requirements.txt
+└── README.md
+```
+
+## 🤝 Como trabalhamos
+- Piloto (teclado): escreve o codigo. Copilotos: pesquisam, revisam e testam ao vivo.
+- O piloto muda todo dia. Escala: Dia 16 = <Ana Cristina Schmidt>, Dia 17 = <Tarciso Mota Ney>, Dia 18 = <nome>, Dia 19 = <nome>, Dia 20 = <nome> (pitch: todos).
+- Commits pequenos, mensagem no padrao "feat: ...", "fix: ...", "docs: ...".
+- Ninguem faz push direto quebrando a execucao de outro: rode "python tests/smoke_test_db.py" antes de cada push.
+- Ao comecar o dia: git pull. Ao terminar: git push e tag do dia (v0.1-setup no Dia 16).
+- Conflito no Git: resolver juntos, na mesma tela.
+
+## ▶️ Como rodar
+Sempre a partir da raiz do repositório:
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env        # adicione sua GEMINI_API_KEY
-python src/gerar_dados.py
-streamlit run app.py
+python src/database/init_db.py
+python src/database/seed_data.py
+python tests/smoke_test_db.py      # deve mostrar 12/12 verificacoes aprovadas
+python src/tools/schema_tools.py   # ferramentas de schema
 ```
