@@ -81,10 +81,25 @@ python src/database/seed_data.py    # popula com dados + anomalias
 python tests/smoke_test_db.py       # deve mostrar 12/12 verificacoes aprovadas
 ```
 
-### 4. Ferramentas e agente
+### 4. Ferramentas
 ```bash
 python src/tools/schema_tools.py      # tabelas, colunas e chaves estrangeiras
 python src/tools/profiling_tools.py   # nulos, distintos, estatisticas e amostras
 python src/tools/query_tools.py       # executor SQL somente leitura com LIMIT
 python src/agent/test_tools_llm.py    # Gemini usando as ferramentas (precisa do .env)
 ```
+
+### 5. Guardrails, servidor MCP e agente
+```bash
+python src/agent/guardrails.py                    # 4 consultas aprovadas e 4 bloqueadas
+python tests/test_guardrails_attacks.py           # ataques SQL (sem API): deve dar APROVADO
+python tests/test_guardrails_attacks.py --com-modelo   # + pedidos maliciosos ao agente (usa a API)
+python -m src.mcp_server.dataops_mcp              # servidor MCP (fica esperando: Ctrl+C para sair)
+python -m src.agent.dataops_agent                 # agente ReAct com a pergunta padrao
+python -m src.agent.dataops_agent "Qual o total de vendas por categoria?"
+```
+Inspecionar o servidor MCP no navegador: `npx @modelcontextprotocol/inspector python -m src.mcp_server.dataops_mcp`.
+
+> ⚠️ **Cota gratuita do Gemini:** o `gemini-3.8-flash` permite 5 requisições por minuto e 20 por dia, e cada pergunta ao agente usa de 3 a 5.
+> O agente espera e tenta de novo nos erros 429 por minuto e 503 (modelo sobrecarregado). Quando a cota **diária** acabar, troque de modelo no `.env`:
+> `GEMINI_MODEL=gemini-3.5-flash-lite`

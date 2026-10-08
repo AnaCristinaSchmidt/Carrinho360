@@ -40,15 +40,36 @@ def validar_query_segura(query: str) -> tuple[bool, str]:
     proibidos = {
         "DROP", "DELETE", "UPDATE", "INSERT", "ALTER",
         "TRUNCATE", "ATTACH", "DETACH", "CREATE",
-        "EXEC", "VACUUM", "PRAGMA",
+        "EXEC", "VACUUM", "PRAGMA", "LOAD_EXTENSION",
     }
+
+    # Tabelas internas do SQLite: expõem o schema inteiro (use as ferramentas de schema)
+    internas = {"SQLITE_MASTER", "SQLITE_SCHEMA", "SQLITE_TEMP_MASTER", "SQLITE_TEMP_SCHEMA"}
 
     for token in tokens:
         if token in proibidos:
             return False, f"Operação não permitida: {token}."
+        if token in internas:
+            return False, f"Acesso a tabela interna não permitido: {token}."
 
     for atual, seguinte in zip(tokens, tokens[1:]):
         if atual == "REPLACE" and seguinte == "INTO":
             return False, "Operação não permitida: REPLACE INTO."
 
     return True, "Query aprovada."
+
+
+if __name__ == "__main__":
+    exemplos = [
+        "SELECT * FROM clientes",
+        "select cidade, count(*) from clientes group by cidade;",
+        "SELECT * FROM clientes WHERE nome = 'DELETE; DROP'",
+        "WITH t AS (SELECT * FROM pedidos) SELECT COUNT(*) FROM t",
+        "DROP TABLE clientes",
+        "SELECT 1; DELETE FROM pedidos",
+        "WITH x AS (SELECT 1) DELETE FROM clientes",
+        "SELECT 1 -- ; DROP TABLE clientes",
+    ]
+    for exemplo in exemplos:
+        aprovada, motivo = validar_query_segura(exemplo)
+        print(f"{'APROVADA ' if aprovada else 'BLOQUEADA'} | {motivo:<45} | {exemplo}")
