@@ -14,8 +14,7 @@ from mcp.client.stdio import stdio_client
 
 RAIZ = Path(__file__).resolve().parents[2]
 load_dotenv(RAIZ / ".env")
-# Pode ser trocado no .env (GEMINI_MODEL=...) quando a cota gratuita de um modelo acabar
-MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 INSTRUCAO = (
     "Voce e o DataOps Agent, um assistente de auditoria de dados em SQLite. "
@@ -53,7 +52,6 @@ class DataOpsAgent:
             raise ValueError("Configure GEMINI_API_KEY no arquivo .env na raiz do projeto.")
         self.max_turnos = max_turnos
         self.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-        # O historico pode ser injetado: o Streamlit (Dia 19) recria o agente a cada pergunta e reaproveita a conversa
         self.historico: list[types.Content] = historico if historico is not None else []
         self._pilha = AsyncExitStack()
         self._sessao: ClientSession | None = None
@@ -91,7 +89,6 @@ class DataOpsAgent:
                 temporario = erro.code == 429 or erro.code >= 500
                 if not temporario or tentativa == tentativas:
                     raise
-                # O plano gratuito libera a cota a cada minuto; erros 5xx costumam passar em segundos
                 espera = 30 if erro.code == 429 else 2**tentativa
                 print(f"[aviso] Gemini respondeu {erro.code}; nova tentativa em {espera}s", file=sys.stderr)
                 await asyncio.sleep(espera)
@@ -119,8 +116,6 @@ class DataOpsAgent:
                 conteudo = ler_resultado(resultado_mcp)
                 falhou = bool(resultado_mcp.isError) or (isinstance(conteudo, dict) and conteudo.get("sucesso") is False)
 
-                # AUTO-RECUPERACAO: o erro (do guardrail ou do SQLite) volta ao modelo como observacao normal;
-                # ele le a mensagem, ajusta o SQL e tenta de novo no proximo turno.
                 trace.append({
                     "turno": turno,
                     "ferramenta": chamada.name,

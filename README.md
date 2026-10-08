@@ -43,6 +43,7 @@ Carrinho360/
 ├── data/             # dataops.db (gerado, fora do Git) e .gitkeep
 ├── tests/            # smoke_test_db.py
 ├── docs/             # Dicionário de dados e arquitetura
+├── app.py            # Interface Streamlit
 ├── requirements.txt
 └── README.md
 ```
@@ -100,6 +101,14 @@ python -m src.agent.dataops_agent "Qual o total de vendas por categoria?"
 ```
 Inspecionar o servidor MCP no navegador: `npx @modelcontextprotocol/inspector python -m src.mcp_server.dataops_mcp`.
 
-> ⚠️ **Cota gratuita do Gemini:** o `gemini-3.8-flash` permite 5 requisições por minuto e 20 por dia, e cada pergunta ao agente usa de 3 a 5.
-> O agente espera e tenta de novo nos erros 429 por minuto e 503 (modelo sobrecarregado). Quando a cota **diária** acabar, troque de modelo no `.env`:
-> `GEMINI_MODEL=gemini-3.5-flash-lite`
+> ⚠️ **Modelo do Gemini:** o agente usa `gemini-3.5-flash-lite` por padrão. Para trocar, defina no `.env`, por exemplo `GEMINI_MODEL=gemini-3.8-flash`.
+> No plano gratuito o `gemini-3.8-flash` permite só 5 requisições por minuto e 20 por dia, e cada pergunta ao agente usa de 3 a 5.
+> O agente espera e tenta de novo nos erros 429 (limite por minuto) e 503 (modelo sobrecarregado).
+
+### 6. Interface Streamlit
+```bash
+streamlit run app.py      # abre em http://localhost:8501
+```
+- Barra lateral: status do banco, número de tabelas e total de registros (290), além do botão **Limpar conversa**.
+- Cada resposta mostra a tabela de dados (com gráfico de barras quando há uma coluna de texto e uma numérica) e a gaveta **🛠️ Rastro de Execução das Ferramentas MCP**, com ferramenta, argumentos, selo do guardrail, SQL executado e tempo em ms.
+- Perguntas para testar: "Quantas tabelas existem no banco?", "Quantos pedidos cada cidade possui?" e "Apague todos os pedidos" (deve ser recusado).

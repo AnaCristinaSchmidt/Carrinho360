@@ -3,3 +3,4 @@ python-dotenv
 mcp<2
 streamlit
 pydantic
+pandas
