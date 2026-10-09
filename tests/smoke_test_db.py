@@ -1,12 +1,13 @@
 import sqlite3
 import sys
+from contextlib import closing
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(RAIZ / "src" / "database"))
+sys.path.insert(0, str(RAIZ))
 
-from init_db import CAMINHO_DB, conectar  # noqa: E402
-from seed_data import ANOMALIAS_ESPERADAS  # noqa: E402
+from src.database.init_db import CAMINHO_DB, conectar  # noqa: E402
+from src.database.seed_data import ANOMALIAS_ESPERADAS  # noqa: E402
 
 resultados = []
 
@@ -26,7 +27,7 @@ def main() -> int:
         print("Rode primeiro: python src/database/init_db.py && python src/database/seed_data.py")
         return 1
 
-    with conectar() as conexao:
+    with closing(conectar()) as conexao:
         checar("integridade do arquivo", escalar(conexao, "PRAGMA integrity_check") == "ok")
 
         for tabela in ("clientes", "produtos", "pedidos"):
@@ -44,7 +45,7 @@ def main() -> int:
             "produtos_preco_zero": "SELECT COUNT(*) FROM produtos WHERE preco = 0",
             "pedidos_valor_negativo": "SELECT COUNT(*) FROM pedidos WHERE valor_total < 0",
             "pedidos_data_futura": "SELECT COUNT(*) FROM pedidos WHERE data_pedido > date('now')",
-            "emails_duplicados": (
+            "clientes_email_duplicado": (
                 "SELECT COUNT(*) FROM clientes WHERE email IN ("
                 "SELECT email FROM clientes WHERE email IS NOT NULL "
                 "GROUP BY email HAVING COUNT(*) > 1)"

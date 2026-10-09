@@ -1,13 +1,20 @@
 import random
+import sys
+from contextlib import closing
 from datetime import date, timedelta
+from pathlib import Path
 
-from init_db import conectar, criar_tabelas, resetar_banco
+RAIZ = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(RAIZ))
+
+from src.database.init_db import conectar, criar_tabelas, resetar_banco  # noqa: E402
 
 rng = random.Random(42)
+DATA_REFERENCIA = date(2026, 10, 1)
 
 ANOMALIAS_ESPERADAS = {
     "clientes_sem_email": 6,
-    "emails_duplicados": 3,
+    "clientes_email_duplicado": 3,
     "produtos_preco_zero": 4,
     "pedidos_valor_negativo": 5,
     "pedidos_data_futura": 3,
@@ -36,7 +43,7 @@ def gerar_clientes(qtd: int = 80) -> list[tuple]:
     for linha in linhas[: ANOMALIAS_ESPERADAS["clientes_sem_email"]]:
         linha[2] = None
     # Anomalia 2: clientes de indice 10, 11 e 12 com o MESMO e-mail
-    for linha in linhas[10 : 10 + ANOMALIAS_ESPERADAS["emails_duplicados"]]:
+    for linha in linhas[10 : 10 + ANOMALIAS_ESPERADAS["clientes_email_duplicado"]]:
         linha[2] = "duplicado@exemplo.com"
     return [tuple(linha) for linha in linhas]
 
@@ -57,14 +64,13 @@ def gerar_produtos(qtd: int = 60) -> list[tuple]:
 
 def gerar_pedidos(qtd: int, clientes: list[tuple], produtos: list[tuple]) -> list[tuple]:
     validos = [p for p in produtos if p[3] > 0]
-    hoje = date.today()
     linhas = []
     for i in range(1, qtd + 1):
         cliente = rng.choice(clientes)
         produto = rng.choice(validos)
         quantidade = rng.randint(1, 5)
         valor_total = round(produto[3] * quantidade, 2)
-        data_pedido = hoje - timedelta(days=rng.randint(1, 300))
+        data_pedido = DATA_REFERENCIA - timedelta(days=rng.randint(1, 300))
         linhas.append([i, cliente[0], produto[0], quantidade, valor_total, data_pedido.isoformat()])
     sorteados = rng.sample(range(qtd), ANOMALIAS_ESPERADAS["pedidos_valor_negativo"] + ANOMALIAS_ESPERADAS["pedidos_data_futura"])
     negativos = sorteados[: ANOMALIAS_ESPERADAS["pedidos_valor_negativo"]]
@@ -80,7 +86,7 @@ def gerar_pedidos(qtd: int, clientes: list[tuple], produtos: list[tuple]) -> lis
 
 def popular() -> None:
     resetar_banco()
-    with conectar() as conexao:
+    with closing(conectar()) as conexao:
         criar_tabelas(conexao)
         clientes = gerar_clientes()
         produtos = gerar_produtos()

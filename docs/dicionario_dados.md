@@ -48,6 +48,14 @@ Descricao: uma linha por pedido (um produto por pedido).
 5. Qual o ticket medio por cidade?
 
 ## Anomalias que planejamos injetar (para o agente encontrar)
-- 6 clientes sem e-mail; 3 e-mails duplicados
+- 6 clientes sem e-mail; 3 clientes compartilhando o mesmo e-mail (duplicado@exemplo.com)
 - 4 produtos com preco zero
 - 5 pedidos com valor negativo; 3 pedidos com data no futuro
+
+## Regras de negocio para analise
+- Pedido com valor_total negativo e um estorno mal lancado: nao conta como venda.
+- Pedido com data_pedido no futuro e erro de digitacao: nao entra em analises por periodo.
+- Produto com preco zero e erro de cadastro.
+- Faturamento (vendas): SUM(valor_total) apenas de pedidos validos, ou seja, valor_total > 0 e data_pedido <= date('now').
+- Ticket medio: faturamento dividido pelo numero de pedidos validos.
+- Ao apresentar um numero que inclua dados anomalos, avise o usuario e mostre tambem o valor sem as anomalias.

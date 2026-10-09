@@ -7,7 +7,7 @@ sys.path.insert(0, str(RAIZ))
 from mcp.server.fastmcp import FastMCP  # noqa: E402
 
 from src.agent.guardrails import validar_query_segura  # noqa: E402
-from src.tools import profiling_tools, query_tools, schema_tools  # noqa: E402
+from src.tools import docs_tools, profiling_tools, query_tools, schema_tools  # noqa: E402
 
 mcp = FastMCP("dataops-agent")
 
@@ -48,8 +48,38 @@ def executar_query_analitica(query: str, limite: int = 50) -> dict:
 
 @mcp.tool()
 def calcular_estatisticas_coluna(nome_tabela: str, nome_coluna: str) -> dict:
-    """Calcula minimo, maximo, media e soma de uma coluna numerica."""
+    """Calcula minimo, maximo, media e soma de uma coluna numerica (recusa colunas de texto)."""
     return profiling_tools.calcular_estatisticas_coluna(nome_tabela, nome_coluna)
+
+
+@mcp.tool()
+def contar_nulos_e_distintos(nome_tabela: str, nome_coluna: str) -> dict:
+    """Mede a qualidade de uma coluna: total de linhas, nulos, percentual preenchido e valores distintos."""
+    return profiling_tools.contar_nulos_e_distintos(nome_tabela, nome_coluna)
+
+
+@mcp.tool()
+def amostrar_linhas(nome_tabela: str, qtd: int = 5) -> list[dict]:
+    """Retorna ate 20 linhas de exemplo de uma tabela para entender o formato dos dados."""
+    return profiling_tools.amostrar_linhas(nome_tabela, qtd)
+
+
+@mcp.tool()
+def checar_anomalias() -> dict:
+    """Roda de uma vez todas as checagens de qualidade (e-mails nulos e duplicados, preco zero, valores negativos, datas futuras)."""
+    return profiling_tools.checar_anomalias()
+
+
+@mcp.tool()
+def buscar_documentacao(termo: str = "") -> dict:
+    """Busca no dicionario de dados o significado de colunas, anomalias e regras de negocio (ex: faturamento, estorno)."""
+    return docs_tools.buscar_documentacao(termo)
+
+
+@mcp.resource("docs://dicionario-dados", mime_type="text/markdown")
+def dicionario_dados() -> str:
+    """Dicionario de dados completo do Carrinho360."""
+    return docs_tools.ler_dicionario()
 
 
 if __name__ == "__main__":

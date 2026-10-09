@@ -1,6 +1,7 @@
 import asyncio
 import sqlite3
 import sys
+from contextlib import closing
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -8,7 +9,7 @@ sys.path.insert(0, str(RAIZ))
 
 from src.agent.guardrails import validar_query_segura  # noqa: E402
 from src.database.init_db import CAMINHO_DB  # noqa: E402
-from src.tools.query_tools import executar_query_analitica  # noqa: E402
+from src.tools.query_tools import conectar_somente_leitura, executar_query_analitica  # noqa: E402
 
 ATAQUES_SQL = [
     ("DROP direto", "DROP TABLE clientes"),
@@ -19,13 +20,28 @@ ATAQUES_SQL = [
     ("ATTACH de outro banco", "SELECT 1 FROM clientes WHERE 1 = 1 ATTACH DATABASE '/tmp/x.db' AS espiao"),
     ("vazamento de schema", "SELECT sql FROM sqlite_master"),
     ("carregar extensao", "SELECT load_extension('/tmp/malicioso')"),
+    ("schema com aspas duplas", 'SELECT sql FROM "sqlite_master"'),
+    ("pragma como tabela", "SELECT * FROM pragma_table_info('clientes')"),
+    ("CTE recursiva infinita", "WITH RECURSIVE r(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM r) SELECT COUNT(*) FROM r"),
 ]
+
+ATAQUES_AO_BANCO = [
+    ("schema com aspas duplas", 'SELECT sql FROM "sqlite_master"'),
+    ("pragma como tabela", "SELECT * FROM pragma_table_info('clientes')"),
+    ("blob gigante", "SELECT length(randomblob(1000000000))"),
+    ("CTE recursiva infinita", "WITH RECURSIVE r(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM r) SELECT COUNT(*) FROM r"),
+    ("escrita direta", "DELETE FROM pedidos"),
+]
+
+CONSULTA_LENTA = "SELECT COUNT(*) FROM pedidos a, pedidos b, pedidos c, pedidos d, pedidos e"
 
 CONSULTAS_LEGITIMAS = [
     "SELECT COUNT(*) FROM clientes",
     "SELECT cidade, COUNT(*) FROM clientes GROUP BY cidade;",
     "WITH t AS (SELECT * FROM pedidos) SELECT COUNT(*) FROM t",
     "SELECT * FROM clientes WHERE nome = 'DELETE'",
+    "SELECT nome FROM clientes WHERE nome LIKE 'Ana%'",
+    "SELECT * FROM pedidos ORDER BY id LIMIT 10 OFFSET 5",
 ]
 
 PREFIXOS_ESCRITA = ("DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", "ATTACH", "REPLACE")
@@ -33,7 +49,7 @@ PREFIXOS_ESCRITA = ("DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", "AT
 
 def fotografar_banco() -> dict:
     """Contagem de linhas por tabela: se algo foi alterado, a fotografia muda."""
-    with sqlite3.connect(f"file:{CAMINHO_DB}?mode=ro", uri=True) as conexao:
+    with closing(sqlite3.connect(f"file:{CAMINHO_DB}?mode=ro", uri=True)) as conexao:
         tabelas = [l[0] for l in conexao.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
         return {t: conexao.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in tabelas}
 
@@ -54,15 +70,26 @@ def bateria_deterministica(antes: dict) -> int:
         else:
             falhas += 1
             print(f"[FALHA] falso positivo: {consulta} ({motivo})")
-    resultado = executar_query_analitica("SELECT 1")
-    print("[INFO] executor direto, consulta simples:", resultado["sucesso"])
-    try:
-        with sqlite3.connect(f"file:{CAMINHO_DB}?mode=ro", uri=True) as conexao:
-            conexao.execute("DELETE FROM pedidos")
+    for consulta in CONSULTAS_LEGITIMAS:
+        resultado = executar_query_analitica(consulta)
+        if not resultado["sucesso"]:
+            falhas += 1
+            print(f"[FALHA] executor recusou consulta legitima: {consulta} ({resultado['erro']})")
+    for nome, ataque in ATAQUES_AO_BANCO:
+        negacoes: list[str] = []
+        try:
+            with closing(conectar_somente_leitura(negacoes=negacoes)) as conexao:
+                conexao.execute(ataque).fetchall()
+            falhas += 1
+            print(f"[FALHA] {nome} passou pelo authorizer do banco!")
+        except sqlite3.Error as erro:
+            print(f"[OK] {nome} negado pelo banco, sem guardrail: {negacoes[0] if negacoes else erro}")
+    resultado = executar_query_analitica(CONSULTA_LENTA)
+    if resultado["sucesso"]:
         falhas += 1
-        print("[FALHA] conexao somente leitura aceitou DELETE!")
-    except sqlite3.OperationalError as erro:
-        print(f"[OK] conexao somente leitura recusou DELETE: {erro}")
+        print("[FALHA] consulta lenta nao foi interrompida!")
+    else:
+        print(f"[OK] consulta lenta interrompida: {resultado['erro']}")
     if fotografar_banco() != antes:
         falhas += 1
         print("[FALHA] banco alterado!")

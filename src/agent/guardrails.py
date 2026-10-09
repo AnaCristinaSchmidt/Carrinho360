@@ -6,15 +6,12 @@ def validar_query_segura(query: str) -> tuple[bool, str]:
     if not isinstance(query, str) or not query.strip():
         return False, "A consulta deve ser uma string não vazia."
 
-    padrao_aspas = r"""'(?:[^']|'')*'|"(?:[^"]|"")*" """
-    texto = re.sub(
-        padrao_aspas.strip(),
-        " CONTEUDO_ENTRE_ASPAS ",
-        query,
-    )
+    texto = re.sub(r"'(?:[^']|'')*'", " CONTEUDO_ENTRE_ASPAS ", query)
 
-    if "'" in texto or '"' in texto:
+    if "'" in texto or texto.count('"') % 2:
         return False, "A consulta contém aspas não fechadas."
+
+    texto = texto.replace('"', " ").replace("`", " ").replace("[", " ").replace("]", " ")
 
     if "--" in texto or "/*" in texto or "*/" in texto:
         return False, "Comentários SQL não são permitidos."
@@ -35,7 +32,7 @@ def validar_query_segura(query: str) -> tuple[bool, str]:
     proibidos = {
         "DROP", "DELETE", "UPDATE", "INSERT", "ALTER",
         "TRUNCATE", "ATTACH", "DETACH", "CREATE",
-        "EXEC", "VACUUM", "PRAGMA", "LOAD_EXTENSION",
+        "EXEC", "VACUUM", "PRAGMA", "LOAD_EXTENSION", "RECURSIVE",
     }
 
     internas = {"SQLITE_MASTER", "SQLITE_SCHEMA", "SQLITE_TEMP_MASTER", "SQLITE_TEMP_SCHEMA"}
@@ -43,7 +40,7 @@ def validar_query_segura(query: str) -> tuple[bool, str]:
     for token in tokens:
         if token in proibidos:
             return False, f"Operação não permitida: {token}."
-        if token in internas:
+        if token in internas or token.startswith("PRAGMA_"):
             return False, f"Acesso a tabela interna não permitido: {token}."
 
     for atual, seguinte in zip(tokens, tokens[1:]):

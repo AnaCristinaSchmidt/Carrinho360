@@ -1,10 +1,11 @@
 import sys
+from contextlib import closing
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ))
 
-from src.database.init_db import conectar  # noqa: E402
+from src.database.init_db import conectar_leitura  # noqa: E402
 
 
 def _tabelas_existentes(conexao) -> list[str]:
@@ -24,13 +25,13 @@ def validar_tabela(conexao, nome_tabela: str) -> str:
 
 def listar_tabelas() -> list[str]:
     """Lista os nomes de todas as tabelas de dados do banco. Use SEMPRE como primeiro passo."""
-    with conectar() as conexao:
+    with closing(conectar_leitura()) as conexao:
         return _tabelas_existentes(conexao)
 
 
 def descrever_schema_tabela(nome_tabela: str) -> dict:
     """Descreve as colunas de uma tabela: nome, tipo, se e obrigatoria e se e chave primaria."""
-    with conectar() as conexao:
+    with closing(conectar_leitura()) as conexao:
         validar_tabela(conexao, nome_tabela)
         colunas = []
         for linha in conexao.execute(f"PRAGMA table_info({nome_tabela})"):
@@ -47,7 +48,7 @@ def descrever_schema_tabela(nome_tabela: str) -> dict:
 
 def obter_chaves_estrangeiras(nome_tabela: str) -> list[dict]:
     """Lista as chaves estrangeiras de uma tabela. Use antes de escrever qualquer JOIN."""
-    with conectar() as conexao:
+    with closing(conectar_leitura()) as conexao:
         validar_tabela(conexao, nome_tabela)
         return [
             {

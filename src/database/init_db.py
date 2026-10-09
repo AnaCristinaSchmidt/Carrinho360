@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -11,6 +12,17 @@ def conectar(caminho: Path = CAMINHO_DB) -> sqlite3.Connection:
     conexao.row_factory = sqlite3.Row
     # As chaves estrangeiras do SQLite vem DESLIGADAS por padrao: ligue em TODA conexao
     conexao.execute("PRAGMA foreign_keys = ON;")
+    return conexao
+
+
+def conectar_leitura(caminho: Path = CAMINHO_DB) -> sqlite3.Connection:
+    """Abre o banco em modo somente leitura; falha se o arquivo nao existir em vez de criar um vazio."""
+    if not caminho.exists():
+        raise FileNotFoundError(
+            f"Banco {caminho.name} nao encontrado. Rode: python src/database/init_db.py && python src/database/seed_data.py"
+        )
+    conexao = sqlite3.connect(f"file:{caminho}?mode=ro", uri=True)
+    conexao.row_factory = sqlite3.Row
     return conexao
 
 
@@ -60,7 +72,7 @@ def resetar_banco() -> None:
 
 if __name__ == "__main__":
     resetar_banco()
-    with conectar() as conexao:
+    with closing(conectar()) as conexao:
         criar_tabelas(conexao)
         tabelas = conexao.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"

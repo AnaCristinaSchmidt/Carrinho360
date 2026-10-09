@@ -1,0 +1,25 @@
+[client]
+toolbarMode = "minimal"
+showSidebarNavigation = false
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "dark"
+primaryColor = "#00BAB4"
+backgroundColor = "#2D2E47"
+secondaryBackgroundColor = "#26273D"
+textColor = "#E8F1F4"
+linkColor = "#00BAB4"
+borderColor = "#3E7996"
+baseRadius = "0.75rem"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+headingFont = "Space Grotesk:https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap"
+codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"
+codeBackgroundColor = "#1F2034"
+chartCategoricalColors = ["#00BAB4", "#069E6E", "#3E7996", "#2F6C82"]
+
+[theme.sidebar]
+backgroundColor = "#24253A"
+secondaryBackgroundColor = "#2D2E47"
